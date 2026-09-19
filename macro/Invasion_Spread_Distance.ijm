@@ -19,18 +19,19 @@ for(i=0; i<nResults; i=i+2){
 	if(roi_1_area>roi_2_area){
 		x_ctr[floor(i/2)] = getResult("X", i+1)/px;
 		y_ctr[floor(i/2)] = getResult("Y", i+1)/py;
+		a = i; b = i+1;
 	}
 	else {
 		x_ctr[floor(i/2)] = getResult("X", i)/px;
 		y_ctr[floor(i/2)] = getResult("Y", i)/py;
+		a = i+1; b = i;
 	}
-
-	roiManager("select", i);
+	
+//	ROI 1 - Large Area ROI
+	roiManager("select", a);
 	run("Interpolate", "interval=1");
 	getSelectionCoordinates(x_i, y_i);
 	
-	theta_i = newArray(x_i.length);
-	dist_i = newArray(x_i.length);
 	roi_i = ThetaDist(x_i, y_i, x_ctr[floor(i/2)], y_ctr[floor(i/2)]);
 	theta_i = Array.slice(roi_i, 0, roi_i.length/2);
 	dist_i = Array.slice(roi_i, roi_i.length/2, roi_i.length);
@@ -40,12 +41,11 @@ for(i=0; i<nResults; i=i+2){
 	theta_resamp_i = Array.slice(resamp_i, 0, resamp_i.length/2);
 	dist_resamp_i = Array.slice(resamp_i, resamp_i.length/2, resamp_i.length);
 	
-	roiManager("select", i+1);
+//	ROI 2 - Small Area ROI
+	roiManager("select", b);
 	run("Interpolate", "interval=1");
 	getSelectionCoordinates(x_ii, y_ii);
 	
-	theta_ii = newArray(x_ii.length);
-	dist_ii = newArray(x_ii.length);
 	roi_ii = ThetaDist(x_ii, y_ii, x_ctr[floor(i/2)], y_ctr[floor(i/2)]);
 	theta_ii = Array.slice(roi_ii, 0, roi_ii.length/2);
 	dist_ii = Array.slice(roi_ii, roi_ii.length/2, roi_ii.length);
@@ -55,17 +55,30 @@ for(i=0; i<nResults; i=i+2){
 	theta_resamp_ii = Array.slice(resamp_ii, 0, resamp_ii.length/2);
 	dist_resamp_ii = Array.slice(resamp_ii, resamp_ii.length/2, resamp_ii.length);
 	
+	
+//	Plotting
+	Array.getStatistics(dist_resamp_i, min, max_di, mean_di, stdDev);
+	Array.getStatistics(dist_resamp_ii, min, max_dii, mean_dii, stdDev);
+	x_seq = Array.getSequence(360);
+	dist_i_mean = newArray(360);
+	Array.fill(dist_i_mean, mean_di);
+	dist_ii_mean = newArray(360);
+	Array.fill(dist_ii_mean, mean_dii);
+	if (max_di > max_dii) yMax = max_di + 50; else yMax = max_dii + 50;
+	
 	Plot.create("Invasion Radial Distance", "Angle in deg ", "Distance" + " in " + unit, theta_resamp_i, dist_resamp_i);
+	Plot.add("dot", x_seq, dist_i_mean);
 	Plot.setColor("blue");
 	Plot.add("line", theta_resamp_ii, dist_resamp_ii);
+	Plot.add("dot", x_seq, dist_ii_mean);
 	Plot.setColor("black");
-	Plot.setLimitsToFit();
+	Plot.setLimits(0, 360, 0, yMax);
 	Plot.show();
 }
 
 close("results");
 
-
+// Function for measuring distance and angle
 function ThetaDist(x, y, x_ctr, y_ctr) {
 	y_diff = newArray(y.length);
 	x_diff = newArray(x.length);
@@ -85,6 +98,7 @@ function ThetaDist(x, y, x_ctr, y_ctr) {
 	return Array.concat(theta, distance_xy);
 }
 
+// Function for resampling data to n_samp bins
 function Resamp(theta, dist, N) {
 	k = 0;
 	x_samp = floor(theta.length/N);
