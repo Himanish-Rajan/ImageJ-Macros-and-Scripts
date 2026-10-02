@@ -95,7 +95,7 @@ def process_stack(gamma=70, s=0.05):
         import time
 
         nz, ny, nx = stack.shape
-        H          = np.zeros((nx, ny))
+        H          = np.zeros((ny, nx))
         H[0, 0]    = 4
         H[0, 1]    = H[0, -1] = H[1, 0] = H[-1, 0] = -1
         fft_ker    = 1 / (1 + gamma * fft2(H))
@@ -119,7 +119,7 @@ def process_stack(gamma=70, s=0.05):
         
     elif stack.ndim == 2:
         ny, nx  = stack.shape
-        H       = np.zeros((nx, ny))
+        H       = np.zeros((ny, nx))
         H[0, 0] = 4
         H[0, 1] = H[0, -1] = H[1, 0] = H[-1, 0] = -1
         fft_ker = 1 / (1 + gamma * fft2(H))
