@@ -1,12 +1,19 @@
-roiManager("Select All");
-run("Set Measurements...", "area centroid redirect=None decimal=3");
-roiManager("measure");
-roiManager("show all");
+Dialog.create("Invasion Spread Analysis");
+Dialog.addMessage("This gets parameters required for sampling your ROIs");
+Dialog.addNumber("Number of sample points per degree", 1);
+Dialog.show();
+
+N = Dialog.getNumber();
+
 
 getPixelSize(unit, pixelWidth, pixelHeight)
 px = parseFloat(pixelWidth);
 py = parseFloat(pixelHeight);
-N = 1;
+
+roiManager("Select All");
+run("Set Measurements...", "area centroid redirect=None decimal=3");
+roiManager("measure");
+roiManager("show all");
 
 if(nResults==1){
 	//	ROI 1 only
