@@ -6,7 +6,7 @@ roiManager("show all");
 getPixelSize(unit, pixelWidth, pixelHeight)
 px = parseFloat(pixelWidth);
 py = parseFloat(pixelHeight);
-n_samp = 360;
+N = 1;
 
 if(nResults==1){
 	//	ROI 1 only
@@ -21,20 +21,19 @@ if(nResults==1){
 	theta = Array.slice(roi, 0, roi.length/2);
 	dist = Array.slice(roi, roi.length/2, roi.length);
 	
-	n = Math.ceil(theta.length/n_samp);
-	resamp = Resamp(theta, dist, n);
-	theta_resamp = Array.slice(resamp, 0, resamp.length/2);
-	dist_resamp = Array.slice(resamp, resamp.length/2, resamp.length);
+	dist_raw = Resamp(theta, dist, N);
+	
+	theta_resamp = Array.slice(dist_raw , 0, dist_raw.length/2);
+	dist_resamp = Array.slice(dist_raw , dist_raw.length/2, dist_raw.length);
 	
 	Array.getStatistics(dist_resamp, min, max_d1, mean_d1, stdDev);
-	x_seq = Array.getSequence(360);
-	dist_mean = newArray(360);
+	dist_mean = newArray(dist_resamp.length);
 	Array.fill(dist_mean, mean_d1);
 	yMax = max_d1 + 50;
 	
 	Plot.create("Invasion Radial Distance", "Angle in deg ", "Distance" + " in " + unit, theta_resamp, dist_resamp);
 	Plot.setColor("red");
-	Plot.add("dot", x_seq, dist_mean);
+	Plot.add("dot", theta_resamp, dist_mean);
 	Plot.setLimits(0, 360, 0, yMax);
 	Plot.show();
 }
@@ -68,10 +67,10 @@ else{
 		theta_i = Array.slice(roi_i, 0, roi_i.length/2);
 		dist_i = Array.slice(roi_i, roi_i.length/2, roi_i.length);
 		
-		n_i = Math.ceil(theta_i.length/n_samp);
-		resamp_i = Resamp(theta_i, dist_i, n_i);
-		theta_resamp_i = Array.slice(resamp_i, 0, resamp_i.length/2);
-		dist_resamp_i = Array.slice(resamp_i, resamp_i.length/2, resamp_i.length);
+		dist_resamp_raw_i = Resamp(theta_i, dist_i, N);
+		Array.print(dist_resamp_raw_i);
+		dist_resamp_i = Array.slice(dist_resamp_raw_i, dist_resamp_raw_i.length/2, dist_resamp_raw_i.length);
+		theta_resamp = Array.slice(dist_resamp_raw_i, 0, dist_resamp_raw_i.length/2);
 		
 	//	ROI 2 - Small Area ROI
 		roiManager("select", b);
@@ -82,27 +81,23 @@ else{
 		theta_ii = Array.slice(roi_ii, 0, roi_ii.length/2);
 		dist_ii = Array.slice(roi_ii, roi_ii.length/2, roi_ii.length);
 		
-		n_ii = Math.ceil(theta_ii.length/n_samp);
-		resamp_ii = Resamp(theta_ii, dist_ii, n_ii);
-		theta_resamp_ii = Array.slice(resamp_ii, 0, resamp_ii.length/2);
-		dist_resamp_ii = Array.slice(resamp_ii, resamp_ii.length/2, resamp_ii.length);
-		
+		dist_resamp_raw_ii = Resamp(theta_ii, dist_ii, N);
+		dist_resamp_ii = Array.slice(dist_resamp_raw_ii, dist_resamp_raw_ii.length/2, dist_resamp_raw_ii.length);
 		
 	//	Plotting
 		Array.getStatistics(dist_resamp_i, min, max_di, mean_di, stdDev);
 		Array.getStatistics(dist_resamp_ii, min, max_dii, mean_dii, stdDev);
-		x_seq = Array.getSequence(360);
-		dist_i_mean = newArray(360);
+		dist_i_mean = newArray(dist_resamp_i.length);
 		Array.fill(dist_i_mean, mean_di);
-		dist_ii_mean = newArray(360);
+		dist_ii_mean = newArray(dist_resamp_ii.length);
 		Array.fill(dist_ii_mean, mean_dii);
 		if (max_di > max_dii) yMax = max_di + 50; else yMax = max_dii + 50;
 		
-		Plot.create("Invasion Radial Distance", "Angle in deg ", "Distance" + " in " + unit, theta_resamp_i, dist_resamp_i);
-		Plot.add("dot", x_seq, dist_i_mean);
+		Plot.create("Invasion Radial Distance", "Angle in deg ", "Distance" + " in " + unit, theta_resamp, dist_resamp_i);
+		Plot.add("dot", theta_resamp, dist_i_mean);
 		Plot.setColor("blue");
-		Plot.add("line", theta_resamp_ii, dist_resamp_ii);
-		Plot.add("dot", x_seq, dist_ii_mean);
+		Plot.add("line", theta_resamp, dist_resamp_ii);
+		Plot.add("dot", theta_resamp, dist_ii_mean);
 		Plot.setColor("black");
 		Plot.setLimits(0, 360, 0, yMax);
 		Plot.show();
@@ -130,27 +125,34 @@ function ThetaDist(x, y, x_ctr, y_ctr) {
 	return Array.concat(theta, distance_xy);
 }
 
-// Function for resampling data to n_samp bins
-function Resamp(theta, dist, N) {
+// Function for resampling data to N
+function Resamp(theta, dist, SampSize) {
 	k = 0;
-	x_samp = floor(theta.length/N);
-	y_samp = floor(dist.length/N);
-	theta_resamp = newArray(x_samp);
-	dist_resamp = newArray(y_samp);
+	index_list = newArray(SampSize*360);
+	theta_concat_precur = Array.getSequence(SampSize*360);
+	theta_concat = newArray(SampSize*360);
+	dist_resamp = newArray(SampSize*360);
 	
-	for (z = 0; z + N < theta.length; z=z+N) {
-		
-		theta_slice = newArray(N);
-		dist_slice = newArray(N);
-		
-		theta_slice = Array.slice(theta,z,z+N);
-		dist_slice = Array.slice(dist,z,z+N);
-		
-		Array.getStatistics(theta_slice, min, max, mean_th, stdDev);
-		theta_resamp[k] = mean_th;
-		Array.getStatistics(dist_slice, min, max, mean_dt, stdDev);
-		dist_resamp[k] = mean_dt;
-		k++;	
+	dist_new = Array.resample(dist,dist.length+SampSize*360);
+	
+	for(x=0; x<theta_concat_precur.length; x++){
+		theta_concat[x] = theta_concat_precur[x]/SampSize;
 	}
-	return Array.concat(theta_resamp, dist_resamp);
+	
+	theta_new = Array.concat(theta,theta_concat);
+	Array.sort(theta_new);
+	
+	for(s=0; s<theta_new.length; s++){
+		if(k==SampSize*360){continue}
+		if(theta_new[s] == theta_concat[k]){
+			index_list[k] = s;
+			k++;
+		}
+	}
+	
+	for(m=0; m<index_list.length; m++){
+		dist_resamp[m] = dist_new[index_list[m]];
+	}
+	
+	return Array.concat(theta_concat,dist_resamp);
 }
